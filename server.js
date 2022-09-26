@@ -125,3 +125,98 @@ async function addDepartment() {
     });
     await queryAsync('INSERT INTO department SET ?', { name: answer.department_name });
 };
+
+async function addRole() {
+	const res = await queryAsync('SELECT * FROM department');	
+	const answer = await inquirer.prompt([
+		{
+			name: 'role',
+			type: 'input',
+			message: 'Role Name:'
+		},
+		{
+			name: 'salary',
+			type: 'input',
+			message: 'Salary:',
+			validate: value => {
+			  if (isNaN(value) === false) return true;
+			  return false;
+			}
+		},
+        {
+			name: 'department',
+			type: 'list',
+			message: 'Department:',
+			choices: () => {
+				const departments = [];
+				for (let i of res) {
+					departments.push(i.name);
+				}
+				return departments;
+			}
+		}
+	]);
+    let departmentId;
+	for (let i of res) {
+		if (i.name === answer.department) {
+			departmentId = i.id;
+  		}
+	}  
+    await queryAsync('INSERT INTO role SET ?', { title: answer.role, salary: answer.salary, departmentId: departmentId });	      	
+    viewRoles();
+};
+
+async function addEmployee() {
+	const resR = await queryAsync('SELECT * FROM role');
+	const answerR = await inquirer.prompt([
+		{
+			name: 'first_name',
+			type: 'input',
+			message: 'First Name:'
+		},
+		{
+			name: 'last_name',
+			type: 'input',
+			message: 'Last Name:'
+		},	
+		{
+			name: 'role',
+			type: 'list',
+			message: 'Role:',
+			choices: () => {
+				const roles = [];
+				for (let i of resR) {
+					roles.push(i.title);
+				}
+				return roles;
+			}
+		}
+	]);	
+    const resE = await queryAsync('SELECT employee.id, CONCAT(employee.first_name, " ", employee.last_name) AS employeeName, employee.role_id, employee.manager_id FROM employee');
+    const answerE = await inquirer.prompt({
+		name: 'employee',
+		type: 'list',
+		message: 'Manager:',
+		choices: () => {
+			const names = ['None'];
+			for (let i of resE) {
+				names.push(i.employeeName);
+			}
+			return names;
+		}
+	});	
+	let roleId;
+	for (let i of resR) {
+		if (i.title === answerR.role) {
+			roleId = i.id;
+  		}
+	}	
+	let managerId;
+	for (let i of resE) {
+		if (i.employeeName === answerE.employee) {
+			managerId = i.id;
+		}
+	}	
+	await queryAsync('INSERT INTO employee SET ?', { firstName: answerR.firstName, lastName: answerR.lastName, roleId: roleId, managerId: managerId});
+	viewEmployees();
+};
